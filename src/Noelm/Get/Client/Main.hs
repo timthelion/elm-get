@@ -1,20 +1,24 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
 module Main where
  
+{- external libraries -}
 import System.Console.CmdArgs
 import System.Environment (getArgs, withArgs)
 import System.Exit
 import System.IO
 import Control.Monad.Error
-import qualified Paths_elm_get as This
+import qualified Paths_noelm_get as This
 import qualified Data.Maybe as Maybe
 import Data.Version (showVersion)
 
-import qualified Get.Install  as Install
-import qualified Get.Publish  as Publish
-import qualified Get.Registry as Registry
-import qualified Utils.Commands     as Cmd
-import qualified Elm.Internal.Name   as N
+{- modules from base Noelm package -}
+import qualified Noelm.Internal.Name   as N
+
+{- internal modules -}
+import qualified Noelm.Get.Client.Install  as Install
+import qualified Noelm.Get.Client.Publish  as Publish
+import qualified Noelm.Get.Client.Registry as Registry
+import qualified Noelm.Get.Utils.Commands  as Cmd
 
 data Commands
     = Install { lib :: String, version :: Maybe String }
@@ -28,13 +32,13 @@ commands =
               }
       &= help "Install libraries in the local project."
       &= details [ "Examples:"
-                 , "  elm-get install            # install everything needed by build.json"
-                 , "  elm-get install tom/Array  # install a specific github repo" ]
+                 , "  noelm-get install            # install everything needed by build.json"
+                 , "  noelm-get install tom/Array  # install a specific github repo" ]
     , Update { libs = [] &= args &= typ "LIBRARY" }
       &= help "Check for updates to any local libraries, ask to upgrade."
       &= details [ "Examples:"
-                 , "  elm-get update             # check for updates to local libraries"
-                 , "  elm-get update tom/Array   # update from a specific github repo" ]
+                 , "  noelm-get update             # check for updates to local libraries"
+                 , "  noelm-get update tom/Array   # update from a specific github repo" ]
     , Publish
       &= help "Publish project to the central repository."
       &= details []
@@ -43,12 +47,12 @@ commands =
 myModes :: Mode (CmdArgs Commands)
 myModes = cmdArgsMode $ modes commands
     &= versionArg [explicit, name "version", name "v", summary info]
-    &= summary (info ++ ", (c) Evan Czaplicki 2013")
+    &= summary (info ++ ", (c) 2013 Evan Czaplicki & 2014 Timothy Hobbs")
     &= help "install, update, and publish elm libraries"
     &= helpArg [explicit, name "help", name "h"]
-    &= program "elm-get"
+    &= program "noelm-get"
  
-info = "elm-get " ++ showVersion This.version
+info = "noelm-get " ++ showVersion This.version
 
 main :: IO ()
 main = do

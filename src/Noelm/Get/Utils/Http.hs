@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Utils.Http where
+module Noelm.Get.Utils.Http where
 
 import Network
 import Network.HTTP
@@ -15,8 +15,8 @@ import Data.Monoid ((<>))
 import qualified Data.List as List
 import qualified Data.Vector as Vector
 import qualified Data.ByteString.Char8 as BSC
-import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Version as V
+import qualified Noelm.Internal.Name as N
+import qualified Noelm.Internal.Version as V
 
 send :: String -> (Manager -> ResourceT IO a) -> ErrorT String IO a
 send domain request =
@@ -49,7 +49,7 @@ githubTags name =
       url = "https://api.github.com/repos/" ++ N.user name ++
             "/" ++ N.project name ++ "/tags"
 
-      headers = [("User-Agent", "elm-get")] <>
+      headers = [("User-Agent", "noelm-get")] <>
                 [("Accept", "application/json")]
 
 

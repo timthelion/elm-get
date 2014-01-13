@@ -1,15 +1,15 @@
-module Utils.Paths where
+module Noelm.Get.Utils.Paths where
 
 import System.FilePath
-import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Version as V
+import qualified Noelm.Internal.Name as N
+import qualified Noelm.Internal.Version as V
 
 internals = "_internals"
 
 libDir = "public" </> "catalog"
 
 json = "docs.json"
-index = "index.elm"
+index = "index.noelm"
 listing = "public" </> "libraries.json"
 listingBits = "listing.bits"
 
@@ -18,8 +18,8 @@ library name = libDir </> N.toFilePath name
 libraryVersion :: N.Name -> V.Version -> FilePath
 libraryVersion name version = library name </> show version
 
-moduleToElmFile :: String -> FilePath
-moduleToElmFile moduleName = swapDots moduleName ++ ".elm"
+moduleToNoelmFile :: String -> FilePath
+moduleToNoelmFile moduleName = swapDots moduleName ++ ".noelm"
 
 moduleToJsonFile :: String -> FilePath
 moduleToJsonFile moduleName = "docs" </> swapDots moduleName ++ ".json"

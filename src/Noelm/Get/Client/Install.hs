@@ -1,5 +1,6 @@
-module Get.Install (install) where
+module Noelm.Get.Client.Install (install) where
 
+{- base libraries -}
 import Control.Applicative ((<$>))
 import Control.Monad (zipWithM_, when)
 import Control.Monad.Error
@@ -11,21 +12,24 @@ import System.Exit
 import System.FilePath
 import System.IO
 import Text.JSON
-import qualified Utils.PrettyJson as Pretty
 
-import qualified Get.Registry as R
-import qualified Utils.Paths as Path
-import qualified Utils.Commands as Cmd
-import qualified Utils.Http as Http
-import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Paths as EPath
-import qualified Elm.Internal.Name as N
-import qualified Elm.Internal.Version as V
+{- imports from main Noelm package -}
+import qualified Noelm.Internal.Dependencies as D
+import qualified Noelm.Internal.Paths as NPath
+import qualified Noelm.Internal.Name as N
+import qualified Noelm.Internal.Version as V
+
+{- internal modules -}
+import qualified Noelm.Get.Client.Registry as R
+import qualified Noelm.Get.Utils.PrettyJson as Pretty
+import qualified Noelm.Get.Utils.Paths as Path
+import qualified Noelm.Get.Utils.Commands as Cmd
+import qualified Noelm.Get.Utils.Http as Http
 
 install :: N.Name -> Maybe String -> ErrorT String IO ()
 install name maybeVersion =
     do version <-
-           Cmd.inDir EPath.dependencyDirectory $ do
+           Cmd.inDir NPath.dependencyDirectory $ do
              (repo,version) <- Cmd.inDir Path.internals (get name maybeVersion)
              liftIO $ createDirectoryIfMissing True repo
              Cmd.copyDir (Path.internals </> repo) (repo </> show version)
@@ -114,7 +118,7 @@ addToDepsFile name version =
     do exists <- doesFileExist file
        add (if exists then yesFile else noFile)
     where
-      file = EPath.dependencyFile
+      file = NPath.dependencyFile
 
       add msg = do
         hPutStr stdout $ msg ++ " (y/n): "
@@ -134,14 +138,14 @@ addToDepsFile name version =
 
 newDependencies :: N.Name -> V.Version -> IO String
 newDependencies name version =
-    do exists <- doesFileExist EPath.dependencyFile
+    do exists <- doesFileExist NPath.dependencyFile
        raw <- if not exists then return "{}" else
-                  withFile EPath.dependencyFile ReadMode $ \handle ->
+                  withFile NPath.dependencyFile ReadMode $ \handle ->
                       do stuff <- hGetContents handle
                          length stuff `seq` return stuff
        case decode raw of
          Error msg -> do
-           hPutStrLn stderr $ "Error reading " ++ EPath.dependencyFile ++ ":\n" ++ msg
+           hPutStrLn stderr $ "Error reading " ++ NPath.dependencyFile ++ ":\n" ++ msg
            exitFailure
          Ok obj ->
              let assocs = fromJSObject obj in
@@ -169,7 +173,7 @@ newDependencies name version =
             Just (JSString oldVersion) -> do
               hPutStr stdout $
                  name' ++ " " ++ fromJSString oldVersion ++ " is already in " ++
-                 EPath.dependencyFile ++ ".\nDo you want to replace it " ++
+                 NPath.dependencyFile ++ ".\nDo you want to replace it " ++
                  "with version " ++ show version ++ "? (y/n): "
               yes <- Cmd.yesOrNo
               case yes of

@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Decode.Type where
+module Noelm.Get.Decode.Type where
 
 import Control.Applicative
 import Control.Monad

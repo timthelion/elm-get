@@ -1,5 +1,4 @@
-
-module Utils.PrettyJson where
+module Noelm.Get.Utils.PrettyJson where
 
 import Text.JSON
 import Text.JSON.Pretty

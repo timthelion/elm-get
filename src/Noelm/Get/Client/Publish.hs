@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Get.Publish where
+module Noelm.Get.Client.Publish where
 
+{- external libraries -}
 import Control.Applicative ((<$>))
 import Control.Monad (when)
 import Control.Monad.Error
@@ -13,17 +14,20 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.ByteString as BS
 import Text.JSON
-import qualified Utils.PrettyJson as Pretty
-
 import Data.Version
-import qualified Get.Registry              as R
-import qualified Utils.Paths               as Path
-import qualified Utils.Commands            as Cmd
-import qualified Utils.Http                as Http
-import qualified Elm.Internal.Dependencies as D
-import qualified Elm.Internal.Paths        as EPath
-import qualified Elm.Internal.Name         as N
-import qualified Elm.Internal.Version      as V
+
+{- modules from base Noelm package -}
+import qualified Noelm.Internal.Dependencies as D
+import qualified Noelm.Internal.Paths        as NPath
+import qualified Noelm.Internal.Name         as N
+import qualified Noelm.Internal.Version      as V
+
+{- internal modules -}
+import qualified Noelm.Get.Client.Registry  as R
+import qualified Noelm.Get.Utils.Paths      as Path
+import qualified Noelm.Get.Utils.Commands   as Cmd
+import qualified Noelm.Get.Utils.Http       as Http
+import qualified Noelm.Get.Utils.PrettyJson as Pretty
 
 publish :: ErrorT String IO ()
 publish =
@@ -33,7 +37,7 @@ publish =
          exposedModules = D.exposed deps
      Cmd.out $ unwords [ "Verifying", show name, show version, "..." ]
      verifyNoDependencies (D.dependencies deps)
-     verifyElmVersion (D.elmVersion deps)
+     verifyNoelmVersion (D.noelmVersion deps)
      verifyExposedModules exposedModules
      verifyVersion name version
      withCleanup $ do
@@ -43,7 +47,7 @@ publish =
 
 getDeps :: ErrorT String IO D.Deps
 getDeps =
-  do either <- liftIO $ runErrorT $ D.depsAt EPath.dependencyFile
+  do either <- liftIO $ runErrorT $ D.depsAt NPath.dependencyFile
      case either of
        Right deps -> return deps
        Left err ->
@@ -55,13 +59,13 @@ getDeps =
                False -> hPutStrLn stdout "Okay, maybe next time!"
                True -> do
                  addMissing =<< readFields
-                 hPutStrLn stdout $ "Done! Now go through " ++ EPath.dependencyFile ++ 
+                 hPutStrLn stdout $ "Done! Now go through " ++ NPath.dependencyFile ++
                       " and check that\neach field is filled in with valid and helpful information."
              exitFailure
             
 addMissing :: Map.Map String JSValue -> IO ()
 addMissing existingFields =
-    writeFile EPath.dependencyFile $ show $ Pretty.object obj'
+    writeFile NPath.dependencyFile $ show $ Pretty.object obj'
     where
       obj' = map (\(f,v) -> (f, Maybe.fromMaybe v (Map.lookup f existingFields))) obj
 
@@ -69,19 +73,19 @@ addMissing existingFields =
       obj = [ ("version", str "0.1")
             , ("summary", str "concise, helpful summary of your project")
             , ("description", str "full description of this project, describe your use case")
-            , ("license", str "BSD3")
+            , ("license", str "LGPLv3")
             , ("repository", str "https://github.com/USER/PROJECT.git")
             , ("exposed-modules", JSArray [])
-            , ("elm-version", str $ show V.elmVersion)
+            , ("noelm-version", str $ show V.noelmVersion)
             , ("dependencies", JSObject $ toJSObject [])
             ]
 
 readFields :: IO (Map.Map String JSValue)
 readFields =
-    do exists <- doesFileExist EPath.dependencyFile
+    do exists <- doesFileExist NPath.dependencyFile
        case exists of
          False -> return Map.empty
-         True -> do raw <- readFile EPath.dependencyFile
+         True -> do raw <- readFile NPath.dependencyFile
                     case decode raw of
                       Error err -> return Map.empty
                       Ok obj -> return (Map.fromList $ fromJSObject obj)
@@ -99,30 +103,27 @@ verifyNoDependencies :: [(N.Name,V.Version)] -> ErrorT String IO ()
 verifyNoDependencies [] = return ()
 verifyNoDependencies _ =
     throwError
-        "elm-get is not able to publish projects with dependencies\n\
-        \yet. This is obviously a very high proirity, and I am working as\n\
-        \fast as I can! For now, let people know about your library on the\n\
-        \mailing list: <https://groups.google.com/forum/#!forum/elm-discuss>"
+        "noelm-get is not able to publish projects with dependencies."
 
-verifyElmVersion :: V.Version -> ErrorT String IO ()
-verifyElmVersion elmVersion@(V.V ns _)
+verifyNoelmVersion :: V.Version -> ErrorT String IO ()
+verifyNoelmVersion noelmVersion@(V.V ns _)
     | ns == ns' = return ()
     | otherwise =
-        throwError $ "elm_dependencies.json says this project depends on version " ++
-                     show elmVersion ++ " of the compiler but the compiler you " ++
-                     "have installed is version " ++ show V.elmVersion
+        throwError $ "noelm_dependencies.json says this project depends on version " ++
+                     show noelmVersion ++ " of the compiler but the compiler you " ++
+                     "have installed is version " ++ show V.noelmVersion
     where
-      V.V ns' _ = V.elmVersion
+      V.V ns' _ = V.noelmVersion
 
 verifyExposedModules :: [String] -> ErrorT String IO ()
 verifyExposedModules modules =
     do when (null modules) $ throwError $
-              "There are no exposed modules in " ++ EPath.dependencyFile ++
+              "There are no exposed modules in " ++ NPath.dependencyFile ++
               "!\nAll libraries must make at least one module available to users."
        mapM_ verifyExists modules
     where
       verifyExists modul =
-          let path = Path.moduleToElmFile modul in
+          let path = Path.moduleToNoelmFile modul in
           do exists <- liftIO $ doesFileExist path
              when (not exists) $ throwError $
                  "Cannot find module " ++ modul ++ " at " ++ path
@@ -162,7 +163,7 @@ verifyVersion name version =
 
 generateDocs :: [String] -> ErrorT String IO ()
 generateDocs modules = 
-    do forM elms $ \path -> Cmd.run "elm-doc" [path]
+    do forM noelms $ \path -> Cmd.run "noelm-doc" [path]
        liftIO $ do
          let path = Path.combinedJson
          BS.writeFile path "[\n"
@@ -171,7 +172,7 @@ generateDocs modules =
          BS.appendFile path "\n]"
 
     where
-      elms = map Path.moduleToElmFile modules
+      noelms = map Path.moduleToNoelmFile modules
       jsons = map Path.moduleToJsonFile modules
 
       append :: FilePath -> IO ()
