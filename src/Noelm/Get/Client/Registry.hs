@@ -18,7 +18,7 @@ import qualified Noelm.Internal.Paths        as Path
 import qualified Paths_noelm_get           as This
 import qualified Noelm.Get.Utils.Http      as Http
 
-domain = "http://localhost:8000"
+domain = "http://noelm-get.thobbs.cz"
 
 libraryUrl path vars =
     domain ++ "/" ++ path ++ "?" ++ urlEncodeVars (version : vars)
