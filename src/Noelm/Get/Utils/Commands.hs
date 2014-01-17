@@ -56,21 +56,14 @@ run command args =
        Left err -> throwError $
                    "failure when running:" ++ concatMap (' ':) (command:args) ++ "\n" ++ err
   where
-    runCommand = do
-      (_, Just out, Just err, handle) <-
-          createProcess (proc command args) { std_out = CreatePipe
-                                            , std_err = CreatePipe }
-      exitCode <- waitForProcess handle
-      result <- case exitCode of
-                  ExitSuccess   -> readFrom out Right
-                  ExitFailure _ -> readFrom err Left
-      hClose out
-      hClose err
-      return result
-
-    readFrom handle label = do
-      msg <- hGetContents handle
-      length msg `seq` return (label msg)
+   runCommand = do
+    (exitCode, out, err) <- readProcessWithExitCode command args ""
+    let output = unlines ["Output:",out,"Errors:",err]
+    return
+     $ case exitCode of
+      ExitSuccess   -> Right output
+      ExitFailure _ -> Left  output
+   
 
 out :: String -> ErrorT String IO ()
 out string = liftIO $ hPutStrLn stdout string'
